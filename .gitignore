@@ -1,0 +1,11 @@
+__pycache__/
+.DS_Store
+.python-version
+
+weights/
+train_logs/
+figs/
+
+*.png
+*.csv
+*.pkl
