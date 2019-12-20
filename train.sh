@@ -1,14 +1,24 @@
-python keras_mnist.py --epoch 10 --max_value 0
-mv trainlog.csv ./train_logs/trainlog_trainnoise00.csv
+EPOCH=3
+GAUSSIAN=4 #0.
 
-python keras_mnist.py --epoch 10 --max_value 0.1
-mv trainlog.csv ./train_logs/trainlog_trainnoise01.csv
+echo -e "\033[0;31m[*]NORMAL->NORMAL, GAUSSIAN: 0.${GAUSSIAN}\033[0;39m"
+python keras_mnist.py --epochs ${EPOCH}
+echo "[*]mv trainlog.csv ./train_logs/trainlog_gau${GAUSSIAN}_normal-normal_epoch${EPOCH}.csv"
+mv trainlog.csv ./train_logs/trainlog_gau${GAUSSIAN}_normal-normal_epoch${EPOCH}.csv
 
-python keras_mnist.py --epoch 10 --max_value 0.3
-mv trainlog.csv ./train_logs/trainlog_trainnoise03.csv
+echo -e "\033[0;31m[*]NORMAL->NOISE, GAUSSIAN: 0.${GAUSSIAN}\033[0;39m"
+python keras_mnist.py --epochs ${EPOCH} --test_noise
+echo "[*]mv trainlog.csv ./train_logs/trainlog_gau${GAUSSIAN}_normal-noise_epoch${EPOCH}.csv"
+mv trainlog.csv ./train_logs/trainlog_gau${GAUSSIAN}_normal-noise_epoch${EPOCH}.csv
 
-python keras_mnist.py --epoch 10 --max_value 0.5
-mv trainlog.csv ./train_logs/trainlog_trainnoise05.csv
+echo -e "\033[0;31m[*]NOISE->NORMAL, GAUSSIAN: 0.${GAUSSIAN}\033[0;39m"
+python keras_mnist.py --epochs ${EPOCH} --train_noise
+echo "[*]mv trainlog.csv ./train_logs/trainlog_gau${GAUSSIAN}_noise-normal_epoch${EPOCH}.csv"
+mv trainlog.csv ./train_logs/trainlog_gau${GAUSSIAN}_noise-normal_epoch${EPOCH}.csv
 
-python keras_mnist.py --epoch 10 --max_value 0.7
-mv trainlog.csv ./train_logs/trainlog_trainnoise07.csv
+echo -e "\033[0;31m[*]NOISE->NOISE, GAUSSIAN: 0.${GAUSSIAN}\033[0;39m"
+python keras_mnist.py --epochs ${EPOCH} --train_noise --test_noise
+echo "[*] mv trainlog.csv ./train_logs/trainlog_gau${GAUSSIAN}_noise-noise_epoch${EPOCH}.csv"
+mv trainlog.csv ./train_logs/trainlog_gau${GAUSSIAN}_noise-noise_epoch${EPOCH}.csv
+
+echo -e "\033[0;32mCOMPLETED!\033[0;39m"

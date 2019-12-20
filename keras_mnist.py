@@ -14,17 +14,32 @@ import math
 from keras import backend as K
 import pickle as pkl
 
-mx_vl = 0
-tl = "gaussian_training_noise_validation_nonoise_relu_"
+mx_vl = ""
+gaussian_val = 0.4
+tl = "title"
+
+def make_title(args):
+    global tl
+    train = "normal"
+    test = "normal"
+
+    if args.train_noise:
+        train = "noise"
+    if args.test_noise:
+        test = "noise"
+
+    tl = "gaussian{0}_{1}-{2}_epoch{3}".format(str(gaussian_val)[2:],
+                                      train, test, args.epochs)
 
 def relu_advanced(x):
-    return K.relu(x, max_value=0)
+    return K.relu(x, max_value=0.2)
 
 def plot_result(history):
     # accuracy
     plt.figure()
     plt.plot(history.history['acc'], label='acc', marker='.')
     plt.plot(history.history['val_acc'], label='val_acc', marker='.')
+    plt.ylim(0, 1)
     plt.grid()
     plt.legend(loc='best')
     plt.title('accuracy')
@@ -45,8 +60,10 @@ def plot_result(history):
 def create_model():
     model = Sequential()
     model.add(Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(28, 28, 1)))
-    #model.add(Conv2D(64, (3, 3), activation="relu"))
-    model.add(Conv2D(64, (3, 3), activation=relu_advanced))
+    
+    model.add(Conv2D(64, (3, 3), activation="relu"))
+    #model.add(Conv2D(64, (3, 3), activation=relu_advanced))
+    
     model.add(MaxPooling2D(pool_size=(2, 2)))
     model.add(Dropout(0.25))
     model.add(Flatten())
@@ -59,7 +76,7 @@ def create_model():
                   metrics=['accuracy'])
     return model
 
-def data_augmentation(x, y):
+def data_augmentation(x, y, img_rate=5):
     datagen = image.ImageDataGenerator(
         rotation_range=60,
         width_shift_range=0.2,
@@ -74,7 +91,6 @@ def data_augmentation(x, y):
     ad_label = [] 
     # configure batch size and retrieve one batch of images
     bs = 100
-    img_rate = 5
     max_loop = x.shape[0]*img_rate/bs
     cnt_loop = 0
     for X_batch, y_batch in datagen.flow(x, y, batch_size=bs):
@@ -88,7 +104,7 @@ def data_augmentation(x, y):
     print("added_imgs: ", len(ad_img))
     return np.array(ad_img), np.array(ad_label)
 
-def make_gaussian_noise_data(data_x, scale=0.1):
+def make_gaussian_noise_data(data_x, scale=gaussian_val):
     gaussian_data_x = data_x + np.random.normal(loc=0, scale=scale, size=data_x.shape)
     gaussian_data_x = np.clip(gaussian_data_x, 0, 1)
     return gaussian_data_x
@@ -97,12 +113,12 @@ def show_img(img):
     pil_img = Image.fromarray(np.uint8(img))
     pil_img.show()
 
-def train_model(epochs=5, batch_size=128, mknoise=False):
+def train_model(epochs=5, batch_size=128, mknoise=False, test_noise=False, train_noise=False):
     # load MNIST data
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
     x_train1, x_valid, y_train1, y_valid = train_test_split(x_train, y_train, test_size=0.1)
-    x_train = x_train1[:9000]
-    y_train = y_train1[:9000]
+    x_train = x_train1[:10000]
+    y_train = y_train1[:10000]
     x_valid = x_valid[:1000]
     y_valid = y_valid[:1000]
 
@@ -125,10 +141,16 @@ def train_model(epochs=5, batch_size=128, mknoise=False):
             pkl.dump((x_train, y_train, x_valid, y_valid), f)
         import sys
         sys.exit()
+   
+    # get noise data
+    if train_noise:
+        with open("./mnist_noise.pkl", "rb") as f:
+            x_train, y_train, x_valid, y_valid = pkl.load(f)
     
-    with open("./mnist_noise.pkl", "rb") as f:
-        x_train, y_train, _, _ = pkl.load(f)
-        #x_train, y_train, x_valid, y_valid = pkl.load(f)
+    # make testdata noise
+    if test_noise:
+        x_test, y_test = data_augmentation(x_test, y_test, img_rate=1)
+        x_test = make_gaussian_noise_data(x_test)
 
     model = create_model()
     print(model.summary())
@@ -158,6 +180,8 @@ def main():
     parser.add_argument('--batch_size', dest='batch_size', type=int, help='size of batch')
     parser.add_argument('--max_value', dest='max_value', type=float, help='size of relu_max_value')
     parser.add_argument('--mknoise', action='store_true', help='make noise data')
+    parser.add_argument('--test_noise', action='store_true', help='use test noise')
+    parser.add_argument('--train_noise', action='store_true', help='use train noise')
     args = parser.parse_args()
     if args.epochs:
         epochs = args.epochs
@@ -171,8 +195,11 @@ def main():
         mx_vl = args.max_value
     else:
         mx_vl = 0
+    
+    make_title(args)
 
-    train_model(epochs, batch_size, mknoise=args.mknoise)
+    train_model(epochs, batch_size, mknoise=args.mknoise, 
+            test_noise=args.test_noise, train_noise=args.train_noise)
 
 if __name__ == '__main__':
     main()
